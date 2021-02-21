@@ -1,0 +1,278 @@
+# USAGE
+# python detect_mask_video.py
+
+# import the necessary packages
+from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
+from tensorflow.keras.preprocessing.image import img_to_array
+from tensorflow.keras.models import load_model
+from imutils.video import VideoStream
+import numpy as np
+import argparse
+import imutils
+import time
+import cv2
+import os
+import tensorflow as tf
+import time
+import requests
+from pygame import mixer
+from gpiozero import LED
+from gpiozero import MotionSensor
+from gpiozero import DistanceSensor
+
+mixer.init()
+light = LED(5)
+light.off()
+def detect_and_predict_mask(frame, faceNet):
+    # grab the dimensions of the frame and then construct a blob
+    # from it
+    (h, w) = frame.shape[:2]
+    blob = cv2.dnn.blobFromImage(frame, 1.0, (300, 300),
+        (104.0, 177.0, 123.0))
+
+    # pass the blob through the network and obtain the face detections
+    faceNet.setInput(blob)
+    detections = faceNet.forward()
+
+    # initialize our list of faces, their corresponding locations,
+    # and the list of predictions from our face mask network
+    faces = []
+    locs = []
+    preds = []
+
+    # loop over the detections
+    for i in range(0, detections.shape[2]):
+        # extract the confidence (i.e., probability) associated with
+        # the detection
+        confidence = detections[0, 0, i, 2]
+
+        # filter out weak detections by ensuring the confidence is
+        # greater than the minimum confidence
+        if confidence > 0.75:
+            # compute the (x, y)-coordinates of the bounding box for
+            # the object
+            box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
+            (startX, startY, endX, endY) = box.astype("int")
+
+            # ensure the bounding boxes fall within the dimensions of
+            # the frame
+            (startX, startY) = (max(0, startX), max(0, startY))
+            (endX, endY) = (min(w - 1, endX), min(h - 1, endY))
+
+            # extract the face ROI, convert it from BGR to RGB channel
+            # ordering, resize it to 224x224, and preprocess it
+            face = frame[startY:endY, startX:endX]
+            face = cv2.cvtColor(face, cv2.COLOR_BGR2RGB)
+            face = cv2.resize(face, (224, 224))
+            face = img_to_array(face)
+            face = preprocess_input(face)
+
+            # add the face and bounding boxes to their respective
+            # lists
+            faces.append(face)
+            locs.append((startX, startY, endX, endY))
+
+    # only make a predictions if at least one face was detected
+    if (len(faces) == 1):
+
+                faces = np.array(faces, dtype="float32")
+                interpreter = tf.lite.Interpreter(model_path="model.tflite")
+                interpreter.allocate_tensors()
+
+                # Get input and output tensors.
+                input_details = interpreter.get_input_details()
+                output_details = interpreter.get_output_details()
+
+                interpreter.set_tensor(input_details[0]['index'], faces)
+
+                interpreter.invoke()
+                preds = interpreter.get_tensor(output_details[0]['index'])
+                print(preds)
+
+    return (locs, preds)
+
+
+
+
+# load our serialized face detector model from disk
+print("[INFO] loading face detector model...")
+prototxtPath = os.path.sep.join(["face_detector", "deploy.prototxt"])
+weightsPath = os.path.sep.join(["face_detector", "res10_300x300_ssd_iter_140000.caffemodel"])
+faceNet = cv2.dnn.readNet(prototxtPath, weightsPath)
+
+# initialize the video stream and allow the camera sensor to warm up
+print("[INFO] starting video stream...")
+vs = VideoStream(src=0).start()
+status = False
+# player1 = vlc.MediaPlayer("./mask.mp3")
+# player2 = vlc.MediaPlayer("./nomask.mp3")
+
+
+# loop over the frames from the video stream
+while True:
+    # grab the frame from the threaded video stream and resize it
+    # to have a maximum width of 400 pixels
+    frame = vs.read()
+    frame = imutils.resize(frame, width=400)
+    frames = []
+    labels = []
+    scores = []
+    
+    fac_info = requests.get('http://quickpass-backend.azurewebsites.net/facility/by/602ea8d423a00b4812b77ee6')
+    fac = fac_info.json()
+    isCapacitySet = fac['isCapacitySet']
+    capacity = fac['capacity']
+    currentCapacity = fac['currentCapacity']
+    maskDetected = False
+
+    (locs, preds) = detect_and_predict_mask(frame, faceNet)
+    t = time.localtime()
+    current_time = time.strftime("%H:%M:%S", t)
+    if (len(locs) > 0):
+        if capacity <= currentCapacity:
+            mixer.music.load('./capacity.mp3')
+            time.sleep(1)
+            mixer.music.play()
+            time.sleep(3.5)
+        else:  
+            mixer.music.load('./stand.mp3')
+            time.sleep(2)
+            mixer.music.play()
+            
+            for i in range(5):
+                
+                (locs, preds) = detect_and_predict_mask(frame, faceNet)
+                for (box, pred) in zip(locs, preds):
+                    # unpack the bounding box and predictions
+                    (startX, startY, endX, endY) = box
+                    (mask, withoutMask) = pred
+                    score = max(mask, withoutMask)
+
+                    if (mask > withoutMask):
+                        label = "Mask"
+                        maskDetected = True
+                        color = (0, 255, 0)
+                    else:
+                        label = "No Mask"
+                        color = (0, 0, 255)
+
+                    # include the probability in the label
+                    label_new = "{}: {:.2f}%".format(label, max(mask, withoutMask) * 100)
+
+                    #develop frame
+                    cv2.putText(frame, label_new, (startX, startY - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 2)
+                    cv2.rectangle(frame, (startX, startY), (endX, endY), color, 2)
+                    # show the output frame
+                    cv2.imshow("Frame", frame)
+                    key = cv2.waitKey(1) & 0xFF
+
+                    # if the `q` key was pressed, break from the loop
+                    if key == ord("q"):
+                        break
+
+                    frames.append(frame)
+                    labels.append(label)
+                    scores.append(score)
+                time.sleep(0.5)
+                
+            if maskDetected == True:
+                i = labels.index("Mask")
+            else:
+                i = 0
+
+            if (status==False):
+                status = True
+                print(labels[i] == 'No Mask')
+                if maskDetected == True:
+                    light.on()
+                    time.sleep(2) 
+                    mixer.music.load('./mask.mp3')
+                    time.sleep(3)
+                    mixer.music.play()
+                    time.sleep(2) 
+                    light.off()
+                    
+                else:
+                    mixer.music.load('./nomask.mp3')
+                    time.sleep(3)
+                    mixer.music.play()
+                    time.sleep(2)
+                    
+                
+                x = requests.post('https://quickpass-backend.azurewebsites.net/newPerson', data = {
+                    "time": current_time,
+                    "score": scores[i],
+                    "mask_status": labels[i],
+                    "photo": [],
+                    } )
+                
+            
+
+            maskDetected = False
+    else:
+        dis = DistanceSensor(echo=24, trigger=18)
+        pir = MotionSensor(21)
+
+        def distance():
+            GPIO.output(TRIG, True)
+            time.sleep(0.00001)
+            GPIO.output(TRIG, False)
+
+            while GPIO.input(ECHO)==0:
+              pulse_start = time.time()
+
+            while GPIO.input(ECHO)==1:
+              pulse_end = time.time()
+
+            pulse_duration = pulse_end - pulse_start
+
+            distance = pulse_duration * 17150
+
+            distance = round(distance, 2)
+            
+            return (distance)
+
+        count = 0
+        while (len(detect_and_predict_mask(imutils.resize(vs.read(), width=400), faceNet)[0])==0):
+            stat = 0
+            dis1 = []
+            pir.wait_for_motion()
+            # time.sleep(3)
+            print('Motion Detected')
+            for i in range(5):
+                currdistance = dis.distance*100
+                print('current distance: ', currdistance)
+                dis1.append(currdistance)
+                if (len(dis1)>1 and dis1[i]>dis1[i-1]):
+                    stat+=1
+                time.sleep(0.5)
+
+            if (stat>=2):
+                count+=1
+                print('left the building')
+                mixer.music.load('./left.mp3')
+                time.sleep(1)
+                mixer.music.play()
+                time.sleep(3)
+                requests.patch('http://quickpass-backend.azurewebsites.net/facility/by/602ea8d423a00b4812b77ee6', data={
+                   "currentCapacity":fac["currentCapacity"]-1 
+                })
+            time.sleep(0.25)
+            
+                
+            print(count)
+        
+
+
+    # show the output frame
+    cv2.imshow("Frame", frame)
+    key = cv2.waitKey(1) & 0xFF
+    
+
+    # if the `q` key was pressed, break from the loop
+    if key == ord("q"):
+        break
+
+# do a bit of cleanup
+cv2.destroyAllWindows()
+vs.stop()
