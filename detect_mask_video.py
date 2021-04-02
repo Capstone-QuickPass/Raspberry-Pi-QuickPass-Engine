@@ -19,9 +19,12 @@ from pygame import mixer
 from gpiozero import LED
 from gpiozero import MotionSensor
 from gpiozero import DistanceSensor
+from thermal import detect_temp
 
 mixer.init()
 light = LED(5)
+dis = DistanceSensor(echo=24, trigger=18)
+pir = MotionSensor(21)
 light.off()
 def detect_and_predict_mask(frame, faceNet):
     # grab the dimensions of the frame and then construct a blob
@@ -118,17 +121,22 @@ while True:
     labels = []
     scores = []
     
-    fac_info = requests.get('http://quickpass-backend.azurewebsites.net/facility/by/602ea8d423a00b4812b77ee6')
-    fac = fac_info.json()
-    isCapacitySet = fac['isCapacitySet']
-    capacity = fac['capacity']
-    currentCapacity = fac['currentCapacity']
+    
     maskDetected = False
 
     (locs, preds) = detect_and_predict_mask(frame, faceNet)
     t = time.localtime()
     current_time = time.strftime("%H:%M:%S", t)
     if (len(locs) > 0):
+        mixer.music.load('./capacity_check.mp3')
+        time.sleep(2)
+        mixer.music.play()
+        time.sleep(3)
+        fac_info = requests.get('http://quickpass-backend.azurewebsites.net/facility/by/602ea8d423a00b4812b77ee6')
+        fac = fac_info.json()
+        isCapacitySet = fac['isCapacitySet']
+        capacity = fac['capacity']
+        currentCapacity = fac['currentCapacity']
         if capacity <= currentCapacity:
             mixer.music.load('./capacity.mp3')
             time.sleep(1)
@@ -136,9 +144,9 @@ while True:
             time.sleep(3.5)
         else:  
             mixer.music.load('./stand.mp3')
-            time.sleep(2)
+            time.sleep(3)
             mixer.music.play()
-            
+            time.sleep(3)
             for i in range(5):
                 
                 (locs, preds) = detect_and_predict_mask(frame, faceNet)
@@ -197,21 +205,26 @@ while True:
                     time.sleep(3)
                     mixer.music.play()
                     time.sleep(2)
-                    
+                print(detect_temp(4))
                 
                 x = requests.post('https://quickpass-backend.azurewebsites.net/newPerson', data = {
                     "time": current_time,
                     "score": scores[i],
                     "mask_status": labels[i],
                     "photo": [],
+                    
                     } )
                 
             
 
             maskDetected = False
     else:
-        dis = DistanceSensor(echo=24, trigger=18)
-        pir = MotionSensor(21)
+        fac_info = requests.get('http://quickpass-backend.azurewebsites.net/facility/by/602ea8d423a00b4812b77ee6')
+        fac = fac_info.json()
+        isCapacitySet = fac['isCapacitySet']
+        capacity = fac['capacity']
+        currentCapacity = fac['currentCapacity']
+        
 
         def distance():
             GPIO.output(TRIG, True)
@@ -234,6 +247,7 @@ while True:
 
         count = 0
         while (len(detect_and_predict_mask(imutils.resize(vs.read(), width=400), faceNet)[0])==0):
+            time.sleep(2)
             stat = 0
             dis1 = []
             pir.wait_for_motion()
@@ -251,7 +265,7 @@ while True:
                 count+=1
                 print('left the building')
                 mixer.music.load('./left.mp3')
-                time.sleep(1)
+                time.sleep(2)
                 mixer.music.play()
                 time.sleep(3)
                 requests.patch('http://quickpass-backend.azurewebsites.net/facility/by/602ea8d423a00b4812b77ee6', data={
