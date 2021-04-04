@@ -1,0 +1,8 @@
+item { 
+	name:'Safe'
+	id:1
+}
+item { 
+	name:'Exposed'
+	id:2
+}

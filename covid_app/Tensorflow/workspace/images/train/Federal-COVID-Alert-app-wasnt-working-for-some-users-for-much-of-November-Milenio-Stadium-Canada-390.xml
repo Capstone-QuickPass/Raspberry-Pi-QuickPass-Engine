@@ -1,0 +1,26 @@
+<annotation>
+	<folder>allimages</folder>
+	<filename>Federal-COVID-Alert-app-wasnt-working-for-some-users-for-much-of-November-Milenio-Stadium-Canada-390.png</filename>
+	<path>C:\Users\amalg\Desktop\CovidApp Detection\RealTimeObjectDetection\Tensorflow\workspace\images\allimages\Federal-COVID-Alert-app-wasnt-working-for-some-users-for-much-of-November-Milenio-Stadium-Canada-390.png</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>390</width>
+		<height>220</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>Safe</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>67</xmin>
+			<ymin>66</ymin>
+			<xmax>243</xmax>
+			<ymax>135</ymax>
+		</bndbox>
+	</object>
+</annotation>

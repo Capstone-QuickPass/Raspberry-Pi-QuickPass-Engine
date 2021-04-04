@@ -1,0 +1,26 @@
+<annotation>
+	<folder>allimages</folder>
+	<filename>unknown (5).png</filename>
+	<path>C:\Users\amalg\Desktop\CovidApp Detection\RealTimeObjectDetection\Tensorflow\workspace\images\allimages\unknown (5).png</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>854</width>
+		<height>664</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>Exposed</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>349</xmin>
+			<ymin>141</ymin>
+			<xmax>545</xmax>
+			<ymax>284</ymax>
+		</bndbox>
+	</object>
+</annotation>

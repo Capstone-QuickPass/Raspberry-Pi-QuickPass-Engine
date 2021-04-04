@@ -1,0 +1,26 @@
+<annotation>
+	<folder>allimages</folder>
+	<filename>WIN_20210217_14_42_49_Pro.jpg</filename>
+	<path>C:\Users\amalg\Desktop\CovidApp Detection\RealTimeObjectDetection\Tensorflow\workspace\images\allimages\WIN_20210217_14_42_49_Pro.jpg</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>1280</width>
+		<height>720</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>Safe</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>151</xmin>
+			<ymin>514</ymin>
+			<xmax>357</xmax>
+			<ymax>606</ymax>
+		</bndbox>
+	</object>
+</annotation>
