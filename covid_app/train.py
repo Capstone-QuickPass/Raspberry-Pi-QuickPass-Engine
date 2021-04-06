@@ -46,4 +46,7 @@ config_text = text_format.MessageToString(pipeline_config)
 with tf.io.gfile.GFile(CONFIG_PATH, "wb") as f:
     f.write(config_text)
 
+## copy this output and run in CMD
 print("""python {}/research/object_detection/model_main_tf2.py --logtostderr --model_dir={}/{} --pipeline_config_path={}/{}/pipeline.config --num_train_steps=5000""".format(APIMODEL_PATH, MODEL_PATH,CUSTOM_MODEL_NAME,MODEL_PATH,CUSTOM_MODEL_NAME))
+# run in parallel for eval
+print("""python {}/research/object_detection/model_main_tf2.py --logtostderr --model_dir={}/{} --pipeline_config_path={}/{}/pipeline.config --checkpoint_dir={}/{}""".format(APIMODEL_PATH, MODEL_PATH,CUSTOM_MODEL_NAME,MODEL_PATH,CUSTOM_MODEL_NAME, MODEL_PATH, CUSTOM_MODEL_NAME))
