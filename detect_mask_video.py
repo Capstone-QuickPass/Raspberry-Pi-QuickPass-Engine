@@ -126,17 +126,22 @@ while True:
 
     (locs, preds) = detect_and_predict_mask(frame, faceNet)
     t = time.localtime()
+    print(t)
     current_time = time.strftime("%H:%M:%S", t)
+    t  = time.strftime("%m/%d/%Y, %H:%M:%S", t)
     if (len(locs) > 0):
+        print("found person")
         mixer.music.load('./capacity_check.mp3')
         time.sleep(2)
         mixer.music.play()
         time.sleep(3)
-        fac_info = requests.get('http://quickpass-backend.azurewebsites.net/facility/by/602ea8d423a00b4812b77ee6')
-        fac = fac_info.json()
-        isCapacitySet = fac['isCapacitySet']
-        capacity = fac['capacity']
-        currentCapacity = fac['currentCapacity']
+        # fac_info = requests.get('http://quickpass-backend.azurewebsites.net/facility/by/602ea8d423a00b4812b77ee6')
+        # fac = fac_info.json()
+        # isCapacitySet = fac['isCapacitySet']
+        # capacity = fac['capacity']
+        # currentCapacity = fac['currentCapacity']
+        capacity = 1
+        currentCapacity = 0
         if capacity <= currentCapacity:
             mixer.music.load('./capacity.mp3')
             time.sleep(1)
@@ -144,6 +149,7 @@ while True:
             time.sleep(3.5)
         else:  
             mixer.music.load('./stand.mp3')
+            print("standing")
             time.sleep(3)
             mixer.music.play()
             time.sleep(3)
@@ -190,35 +196,61 @@ while True:
 
             if (status==False):
                 status = True
-                print(labels[i] == 'No Mask')
+                print(maskDetected)
                 if maskDetected == True:
                     light.on()
-                    time.sleep(2) 
                     mixer.music.load('./mask.mp3')
                     time.sleep(3)
                     mixer.music.play()
                     time.sleep(2) 
                     light.off()
-                    
+                    mixer.music.load('./temp.mp3')
+                    time.sleep(3)
+                    mixer.music.play()
+                    time.sleep(4)
                 else:
-                    mixer.music.load('./nomask.mp3')
+                    mixer.music.load('./mask.mp3')
                     time.sleep(3)
                     mixer.music.play()
                     time.sleep(2)
-                print(detect_temp(4))
+                    mixer.music.load('./temp.mp3')
+                    time.sleep(3)
+                    mixer.music.play()
+                    time.sleep(4)
                 
+                # temp = detect_temp(4)
+                temp = 38
+                print(temp)
+                vulnerable = False
+                temp_val = 37
+                if temp>37:
+                    vulnerable = True
+                    temp_val = temp
+                    mixer.music.load('./temp_alert.mp3')
+                    time.sleep(3)
+                    mixer.music.play()
+                    time.sleep(3)
+                elif maskDetected:
+                    mixer.music.load('./proceed.mp3')
+                    time.sleep(3)
+                    mixer.music.play()
+                    time.sleep(3)
                 x = requests.post('https://quickpass-backend.azurewebsites.net/newPerson', data = {
                     "time": current_time,
                     "score": scores[i],
                     "mask_status": labels[i],
-                    "photo": [],
-                    
-                    } )
+                    "thermalPhoto" : [],
+                    "individualPhoto": [],
+                
+                    "tempValue": temp_val,
+                    "datetime": t
+
+                   })
                 
             
 
             maskDetected = False
-    else:
+    elif False:
         fac_info = requests.get('http://quickpass-backend.azurewebsites.net/facility/by/602ea8d423a00b4812b77ee6')
         fac = fac_info.json()
         isCapacitySet = fac['isCapacitySet']
