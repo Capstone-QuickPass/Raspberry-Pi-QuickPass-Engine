@@ -128,11 +128,12 @@ while True:
         time.sleep(3)
         fac_info = requests.get('http://quickpass-backend.azurewebsites.net/facility/by/602ea8d423a00b4812b77ee6')
         fac = fac_info.json()
+        capacity = 1
+        currentCapacity = 0
         isCapacitySet = fac['isCapacitySet']
         capacity = fac['capacity']
         currentCapacity = fac['currentCapacity']
-        capacity = 1
-        currentCapacity = 0
+        
         if capacity <= currentCapacity:
             mixer.music.load('./capacity.mp3')
             time.sleep(1)
