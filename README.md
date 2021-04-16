@@ -1,5 +1,27 @@
 # QuickPass Engine
 
+## Version 1.0.0 April 2020
+
+
+After installing necessary libraries:
+(all requirements listed in requirements.txt)
+
+## For Raspberry Pi:
+make sure to create circuit for Pi as shown bellow:
+![alt text](https://github.com/Capstone-QuickPass/Raspberry-Pi-QuickPass-Engine/blob/main/circuit.png)
+run: `python detect_mask_video.py`
+
+## For any other Computer (using old mask detection model):
+`python mask_detector_computer.py`
+
+## New Improvements:
+- Integrated IR Sensor to send alerts to backend
+- Added voice response system
+- Added tests for servo motor
+
+
+
+
 ## Version 0.1.0 March 2020
 
 
