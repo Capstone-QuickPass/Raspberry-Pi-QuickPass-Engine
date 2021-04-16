@@ -1,4 +1,4 @@
-# USAGE
+
 # python detect_mask_video.py
 
 # import the necessary packages
@@ -45,37 +45,30 @@ def detect_and_predict_mask(frame, faceNet):
 
     # loop over the detections
     for i in range(0, detections.shape[2]):
-        # extract the confidence (i.e., probability) associated with
-        # the detection
+
         confidence = detections[0, 0, i, 2]
 
-        # filter out weak detections by ensuring the confidence is
-        # greater than the minimum confidence
+
         if confidence > 0.75:
-            # compute the (x, y)-coordinates of the bounding box for
-            # the object
+
             box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
             (startX, startY, endX, endY) = box.astype("int")
 
-            # ensure the bounding boxes fall within the dimensions of
-            # the frame
             (startX, startY) = (max(0, startX), max(0, startY))
             (endX, endY) = (min(w - 1, endX), min(h - 1, endY))
 
-            # extract the face ROI, convert it from BGR to RGB channel
-            # ordering, resize it to 224x224, and preprocess it
+
             face = frame[startY:endY, startX:endX]
             face = cv2.cvtColor(face, cv2.COLOR_BGR2RGB)
             face = cv2.resize(face, (224, 224))
             face = img_to_array(face)
             face = preprocess_input(face)
 
-            # add the face and bounding boxes to their respective
-            # lists
+
             faces.append(face)
             locs.append((startX, startY, endX, endY))
 
-    # only make a predictions if at least one face was detected
+
     if (len(faces) == 1):
 
                 faces = np.array(faces, dtype="float32")
@@ -97,14 +90,13 @@ def detect_and_predict_mask(frame, faceNet):
 
 
 
-# load our serialized face detector model from disk
-print("[INFO] loading face detector model...")
+print("loading face detector model...")
 prototxtPath = os.path.sep.join(["face_detector", "deploy.prototxt"])
 weightsPath = os.path.sep.join(["face_detector", "res10_300x300_ssd_iter_140000.caffemodel"])
 faceNet = cv2.dnn.readNet(prototxtPath, weightsPath)
 
 # initialize the video stream and allow the camera sensor to warm up
-print("[INFO] starting video stream...")
+print("starting video stream...")
 vs = VideoStream(src=0).start()
 status = False
 # player1 = vlc.MediaPlayer("./mask.mp3")
@@ -113,8 +105,7 @@ status = False
 
 # loop over the frames from the video stream
 while True:
-    # grab the frame from the threaded video stream and resize it
-    # to have a maximum width of 400 pixels
+
     frame = vs.read()
     frame = imutils.resize(frame, width=400)
     frames = []
@@ -126,17 +117,23 @@ while True:
 
     (locs, preds) = detect_and_predict_mask(frame, faceNet)
     t = time.localtime()
+    print(t)
     current_time = time.strftime("%H:%M:%S", t)
+    t  = time.strftime("%m/%d/%Y, %H:%M:%S", t)
     if (len(locs) > 0):
+        print("found person")
         mixer.music.load('./capacity_check.mp3')
         time.sleep(2)
         mixer.music.play()
         time.sleep(3)
         fac_info = requests.get('http://quickpass-backend.azurewebsites.net/facility/by/602ea8d423a00b4812b77ee6')
         fac = fac_info.json()
+        capacity = 1
+        currentCapacity = 0
         isCapacitySet = fac['isCapacitySet']
         capacity = fac['capacity']
         currentCapacity = fac['currentCapacity']
+        
         if capacity <= currentCapacity:
             mixer.music.load('./capacity.mp3')
             time.sleep(1)
@@ -144,6 +141,7 @@ while True:
             time.sleep(3.5)
         else:  
             mixer.music.load('./stand.mp3')
+            print("standing")
             time.sleep(3)
             mixer.music.play()
             time.sleep(3)
@@ -190,35 +188,61 @@ while True:
 
             if (status==False):
                 status = True
-                print(labels[i] == 'No Mask')
+                print(maskDetected)
                 if maskDetected == True:
                     light.on()
-                    time.sleep(2) 
                     mixer.music.load('./mask.mp3')
                     time.sleep(3)
                     mixer.music.play()
                     time.sleep(2) 
                     light.off()
-                    
+                    mixer.music.load('./temp.mp3')
+                    time.sleep(3)
+                    mixer.music.play()
+                    time.sleep(4)
                 else:
                     mixer.music.load('./nomask.mp3')
                     time.sleep(3)
                     mixer.music.play()
                     time.sleep(2)
-                print(detect_temp(4))
+                    mixer.music.load('./temp.mp3')
+                    time.sleep(3)
+                    mixer.music.play()
+                    time.sleep(4)
                 
+                temp = detect_temp(4)
+                
+                print(temp)
+                vulnerable = False
+                temp_val = 37
+                if temp>37:
+                    vulnerable = True
+                    temp_val = temp
+                    mixer.music.load('./temp_alert.mp3')
+                    time.sleep(3)
+                    mixer.music.play()
+                    time.sleep(3)
+                elif maskDetected:
+                    mixer.music.load('./proceed.mp3')
+                    time.sleep(3)
+                    mixer.music.play()
+                    time.sleep(3)
                 x = requests.post('https://quickpass-backend.azurewebsites.net/newPerson', data = {
                     "time": current_time,
                     "score": scores[i],
                     "mask_status": labels[i],
-                    "photo": [],
-                    
-                    } )
+                    "thermalPhoto" : [],
+                    "individualPhoto": [],
+                
+                    "tempValue": temp_val,
+                    "datetime": t
+
+                   })
                 
             
 
             maskDetected = False
-    else:
+    elif False:
         fac_info = requests.get('http://quickpass-backend.azurewebsites.net/facility/by/602ea8d423a00b4812b77ee6')
         fac = fac_info.json()
         isCapacitySet = fac['isCapacitySet']
@@ -283,10 +307,9 @@ while True:
     key = cv2.waitKey(1) & 0xFF
     
 
-    # if the `q` key was pressed, break from the loop
     if key == ord("q"):
         break
 
-# do a bit of cleanup
+
 cv2.destroyAllWindows()
 vs.stop()
